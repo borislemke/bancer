@@ -1,4 +1,7 @@
+# Bancer
+Bancer is a load balancer written in Node.js.
 
+## Configuration
 ```json
 {
   "id": "backend-service-id",
@@ -29,6 +32,7 @@
 Options
 - round-robin
 - least-connection
+- random
 
 `weighted-?`
 

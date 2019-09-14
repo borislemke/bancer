@@ -1,8 +1,8 @@
 {
-  "name": "lb",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "name": "bancer",
+  "version": "0.0.1",
+  "description": "A blazing fast load balancer written in Node.js",
+  "main": "dist/index.js",
   "scripts": {
     "start": "nodemon src/index.ts",
     "compile": "tsc",
@@ -12,7 +12,7 @@
     "profile": "NODE_ENV=production 0x -D flamechart -P 'wrk -d15s http://localhost:4040' dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
+  "author": "Boris Lemke<dimaslemke@gmail.com>",
   "license": "ISC",
   "devDependencies": {
     "0x": "^4.8.2",
