@@ -1,0 +1,42 @@
+{
+  "name": "lb",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "nodemon src/index.ts",
+    "compile": "tsc",
+    "preserve": "npm run compile",
+    "serve": "NODE_ENV=production node dist/index.js",
+    "preprofile": "npm run compile",
+    "profile": "NODE_ENV=production 0x -D flamechart -P 'wrk -d15s http://localhost:4040' dist/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "0x": "^4.8.2",
+    "@types/chai": "^4.2.2",
+    "@types/http-proxy": "^1.17.0",
+    "@types/mocha": "^5.2.7",
+    "@types/morgan": "^1.7.37",
+    "@types/node": "^12.7.5",
+    "@types/request": "^2.48.3",
+    "@types/signale": "^1.2.1",
+    "@types/socket.io": "^2.1.2",
+    "chai": "^4.2.0",
+    "mocha": "^6.2.0",
+    "nodemon": "^1.19.2",
+    "rimraf": "^3.0.0",
+    "source-map-support": "^0.5.13",
+    "ts-node": "^8.3.0",
+    "tslint": "^5.20.0",
+    "tslint-config-standard": "^8.0.1",
+    "typescript": "^3.6.3"
+  },
+  "dependencies": {
+    "morgan": "^1.9.1",
+    "request": "^2.88.0",
+    "signale": "^1.4.0"
+  }
+}
