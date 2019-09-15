@@ -10,8 +10,6 @@ const promisifiedRequest: any = promisify(request.get)
 
 export class TargetServer {
 
-  available = false
-
   config: ITargetServerConfig
 
   // Telemetry Data
@@ -19,6 +17,10 @@ export class TargetServer {
   openConnections = 0
 
   totalEventErrors = 0
+
+  httpAgent = new Agent({ keepAlive: true })
+
+  health = true
 
   get host (): string {
     return `http://${this.hostname}:${this.port}`
@@ -36,7 +38,11 @@ export class TargetServer {
     this.openConnections -= 1
   }
 
-  proxyRequest (request: IncomingMessage, response: ServerResponse, httpAgent: Agent) {
+  proxyRequest (request: IncomingMessage, response: ServerResponse, retryOnError: (req: IncomingMessage, res: ServerResponse, retry: boolean) => void) {
+    if (!this.health) {
+      return retryOnError(request, response, true)
+    }
+
     const options: any = {
       ...url.parse(request.url),
       host: this.host,
@@ -44,54 +50,70 @@ export class TargetServer {
       hostname: this.hostname,
       headers: {
         ...request.headers,
-        'X-From-Node-Balancer': true
+        'X-From-Node-Balancer': 'true'
       },
       method: request.method,
-      agent: httpAgent
+      agent: this.httpAgent
     }
 
     this.registerNewConnection()
-    const connector = http.request(options, serverResponse => {
+    const connector = http.request(options, proxyRes => {
       let data = ''
-      serverResponse.on('data', chunk => {
+      proxyRes.on('data', chunk => {
         data += chunk
       })
-      serverResponse.on('end', () => {
+      proxyRes.on('end', () => {
         this.closeConnection()
         response.end(data)
       })
     })
 
     request.pipe(connector)
+      .on('error', err => {
+        /**
+         * TODO(fallback): Fallback method. Re-queueing requests
+         * @date - 15/09/19
+         * @time - 09.12
+         */
+        /**
+         * Connection abruptly terminated, i.e when one of the
+         * servers dies during request balancing.
+         */
+        this.totalEventErrors += 1
+        this.health = false
+        console.log('error', err)
+        this.closeConnection()
+        request.destroy()
+        retryOnError(request, response, true)
+      })
   }
 
-  health = false
+  async doLivenessProbe () {
+    if (!this.config.livenessProbe || !this.config.livenessProbe.path) {
+      return
+    }
 
-  async doHealthCheck () {
     this.health = false
     try {
-      await promisifiedRequest(`${this.host}/${this.config.readinessProbe.path}`)
+      await promisifiedRequest(`${this.host}/${this.config.livenessProbe.path}`)
+      signale.success(`Server ${this.id} health-check is OK`)
       this.health = true
-    } catch (err) {
-      signale.error('Health Check Errors', err)
+    } catch (error) {
+      signale.error(`Server ${this.id} health-check is NOK! Error:`, error.message)
     } finally {
-      return this.health
+      setTimeout(() => {
+        this.doLivenessProbe()
+      }, (this.config.livenessProbe.periodSeconds || 5) * 1000)
     }
   }
 
   get telemetryData () {
-    const {
-      totalConnections,
-      openConnections,
-      totalEventErrors
-    } = this
-
     return {
       config: this.config,
       metrics: {
-        totalConnections,
-        openConnections,
-        totalEventErrors
+        totalRequests: this.totalConnections,
+        openConnections: this.openConnections,
+        totalEventErrors: this.totalEventErrors
       }
     }
   }

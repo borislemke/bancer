@@ -5,13 +5,15 @@
   },
   "watch": [
     "src/",
-    "nodemon.json"
+    "nodemon.json",
+    "config.json"
   ],
   "ignore": [
     "src/**/*.spec.ts",
     "src/**/*.test.ts"
   ],
   "env": {
+    "DEBUG": "true",
     "NODE_ENV": "development"
   },
   "ext": "ts json"

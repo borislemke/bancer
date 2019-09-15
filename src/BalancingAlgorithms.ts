@@ -42,9 +42,16 @@ const randomAlgorithm: BalancingAlgorithm = servers => {
   return [servers[index], index]
 }
 
-export const LBAlgorithms: { [method: string]: BalancingAlgorithm } = {
-  'round-robin': roundRobin,
-  'least-connection': leastConnection,
-  'random': randomAlgorithm,
-  default: roundRobin
+const returnIfOne = (ba: BalancingAlgorithm) => (servers: TargetServer[]): [TargetServer, number] => {
+  if (servers.length === 1) {
+    return [servers[0], 0]
+  }
+  return ba(servers)
+}
+
+export const BalancingAlgorithmsOptions: { [method: string]: BalancingAlgorithm } = {
+  'round-robin': returnIfOne(roundRobin),
+  'least-connection': returnIfOne(leastConnection),
+  'random': returnIfOne(randomAlgorithm),
+  default: returnIfOne(roundRobin)
 }

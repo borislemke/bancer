@@ -8,8 +8,8 @@ export interface IBalancerConfig extends IJSONConfig {
 
 export const BalancerConfig: IBalancerConfig = require('../config.json')
 
-BalancerConfig.hasHealthCheck = BalancerConfig.servers.filter(server => server.readinessProbe && server.readinessProbe.path).length > 1
-BalancerConfig.hasWeightDistribution = BalancerConfig.servers.filter(server => server.weight).length > 1
+BalancerConfig.hasHealthCheck = BalancerConfig.servers.filter(server => server.livenessProbe && server.livenessProbe.path).length > 0
+BalancerConfig.hasWeightDistribution = BalancerConfig.servers.filter(server => server.weight).length > 0
 
 if (process.env.DEBUG) {
   const configScope = signale.scope('Config')

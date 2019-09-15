@@ -1,37 +1,66 @@
 import { BalancerConfig, IBalancerConfig } from './BalancerConfig'
-import { Agent, createServer, IncomingMessage, Server, ServerResponse } from 'http'
-import { BalancingAlgorithm, LBAlgorithms } from './algorithms'
+import { createServer, IncomingMessage, Server, ServerResponse } from 'http'
+import { BalancingAlgorithm, BalancingAlgorithmsOptions } from './BalancingAlgorithms'
 import { TargetServer } from './TargetServer'
 
 export class MasterServer {
 
-  totalConnections = 0
+  /**
+   * Total number of incoming connections in all target servers
+   */
+  get requestsInTargetsCount (): number {
+    return this.targetServers.reduce((all, curr) => all + curr.telemetryData.metrics.totalRequests, 0)
+  }
+
+  get requestLossCount (): number {
+    return this.incomingRequestsCount - this.requestsInTargetsCount
+  }
+
+  get requestLossRate (): string {
+    if (!this.requestLossCount) {
+      return '0%'
+    }
+    return (this.requestLossCount / this.incomingRequestsCount * 100).toFixed(2) + '%'
+  }
+
+  /**
+   * Total incoming request before distribution
+   */
+  incomingRequestsCount = 0
+
+  /**
+   * Number of retried requests
+   */
+  retriedRequestsCount = 0
 
   masterServer: Server
 
-  httpAgent = new Agent({ keepAlive: true })
-
-  servers: TargetServer[]
+  targetServers: TargetServer[]
 
   getTelemetryData = () => {
     return {
-      algorithm: BalancerConfig.algorithm,
-      totalConnections: this.totalConnections,
-      servers: this.servers.map(server => server.telemetryData)
+      ...BalancerConfig,
+      servers: undefined,
+      requests: this.incomingRequestsCount,
+      requestsInTarget: this.requestsInTargetsCount,
+      retriedRequests: this.retriedRequestsCount,
+      requestLossCount: this.requestLossCount,
+      requestLossRate: this.requestLossRate,
+      targetServers: this.targetServers.map(server => server.telemetryData)
     }
   }
 
   get selectedAlgorithm (): BalancingAlgorithm {
-    return LBAlgorithms[BalancerConfig.algorithm]
-      || LBAlgorithms.default
+    return BalancingAlgorithmsOptions[BalancerConfig.algorithm]
+      || BalancingAlgorithmsOptions.default
   }
 
   constructor (public config: IBalancerConfig) {
     this.masterServer = createServer(this.incomingMessageHandler)
-    this.servers = config.servers.map(TargetServer.fromJSON)
+    this.targetServers = config.servers.map(TargetServer.fromJSON)
   }
 
-  incomingMessageHandler = (request: IncomingMessage, response: ServerResponse) => {
+  incomingMessageHandler = (request: IncomingMessage, response: ServerResponse, retry = false) => {
     if (request.url === '/ping') {
       response.writeHead(200, {
         'Content-Type': 'application/json'
@@ -40,29 +69,34 @@ export class MasterServer {
       return void response.end()
     }
 
-    this.totalConnections += 1
+    if (retry) {
+      this.retriedRequestsCount += 1
+    } else {
+      this.incomingRequestsCount += 1
+    }
 
-    const availableServers = this.servers.filter(server => server.available)
+    const availableServers = this.targetServers.filter(server => server.health)
+
+    if (!availableServers.length) {
+      response.writeHead(500, {
+        'Content-Type': 'text/html'
+      })
+      response.write('Server Error')
+      return void response.end()
+    }
 
     const [_targetServer] = this.selectedAlgorithm(availableServers)
 
-    _targetServer.proxyRequest(request, response, this.httpAgent)
+    _targetServer.proxyRequest(request, response, this.incomingMessageHandler)
   }
 
-  async prepareHealthCheckIfPresent () {
-    const checked = await Promise.all(this.servers.map(server => server.doHealthCheck()))
-    this.servers = this.servers.map((server, index) => {
-      server.available = checked[index]
-      return server
-    })
-    setTimeout(() => this.prepareHealthCheckIfPresent(), 60000)
+  async doLivenessProbeIfPresent () {
+    await Promise.all(this.targetServers.map(server => server.doLivenessProbe()))
   }
 
   static async fromConfig (config: IBalancerConfig): Promise<MasterServer> {
     const masterServer = new MasterServer(config)
-    if (config.hasHealthCheck) {
-      await masterServer.prepareHealthCheckIfPresent()
-    }
+    await masterServer.doLivenessProbeIfPresent()
     return masterServer
   }
 

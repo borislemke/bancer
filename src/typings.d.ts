@@ -1,8 +1,7 @@
-export interface IReadinessProbe {
+export interface ILivenessProbe {
   path: string
-  waitUntilSeconds?: number // 0
-  retryAfterSeconds?: number // 10
-  stopRetryAfterAttempts?: number // 2
+  initialDelaySeconds?: number // 0
+  periodSeconds?: number // 10
 }
 
 export interface ITargetServerConfig {
@@ -11,7 +10,7 @@ export interface ITargetServerConfig {
   port: number | string
   weight?: number
   name?: string
-  readinessProbe?: IReadinessProbe
+  livenessProbe?: ILivenessProbe
 }
 
 export interface IJSONConfig {
@@ -21,5 +20,5 @@ export interface IJSONConfig {
 
   servers: ITargetServerConfig[]
 
-  readinessProbe?: IReadinessProbe
+  livenessProbe?: ILivenessProbe
 }
