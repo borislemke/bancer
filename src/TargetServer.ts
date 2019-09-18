@@ -38,9 +38,9 @@ export class TargetServer {
     this.openConnections -= 1
   }
 
-  proxyRequest (request: IncomingMessage, response: ServerResponse, retryOnError: (req: IncomingMessage, res: ServerResponse, retry: boolean) => void) {
+  proxyRequest (request: IncomingMessage, response: ServerResponse, retryOnError: (req: IncomingMessage, res: ServerResponse, condition: { retry?: boolean, queue?: boolean }) => void) {
     if (!this.health) {
-      return retryOnError(request, response, true)
+      return retryOnError(request, response, { retry: true })
     }
 
     const options: any = {
@@ -62,6 +62,10 @@ export class TargetServer {
       proxyRes.on('data', chunk => {
         data += chunk
       })
+      proxyRes.on('error', proxyError => {
+        console.log('proxyError', proxyError)
+        this.totalEventErrors += 1
+      })
       proxyRes.on('end', () => {
         this.closeConnection()
         response.end(data)
@@ -71,20 +75,14 @@ export class TargetServer {
     request.pipe(connector)
       .on('error', err => {
         /**
-         * TODO(fallback): Fallback method. Re-queueing requests
-         * @date - 15/09/19
-         * @time - 09.12
-         */
-        /**
          * Connection abruptly terminated, i.e when one of the
          * servers dies during request balancing.
          */
-        this.totalEventErrors += 1
+        signale.error('Pipe Error', err.message)
         this.health = false
-        console.log('error', err)
         this.closeConnection()
         request.destroy()
-        retryOnError(request, response, true)
+        retryOnError(request, response, { retry: true })
       })
   }
 
@@ -92,15 +90,22 @@ export class TargetServer {
     if (!this.config.livenessProbe || !this.config.livenessProbe.path) {
       return
     }
+    const _previousValue = this.health
 
-    this.health = false
+    let _probeError: any
+
     try {
       await promisifiedRequest(`${this.host}/${this.config.livenessProbe.path}`)
-      signale.success(`Server ${this.id} health-check is OK`)
       this.health = true
     } catch (error) {
-      signale.error(`Server ${this.id} health-check is NOK! Error:`, error.message)
+      _probeError = error
+      this.health = false
     } finally {
+      if (_previousValue !== this.health) {
+        this.health
+          ? signale.success(`Server ${this.id} health-check is OK`)
+          : signale.error(`Server ${this.id} health-check is NOK! Error:`, _probeError.message)
+      }
       setTimeout(() => {
         this.doLivenessProbe()
       }, (this.config.livenessProbe.periodSeconds || 5) * 1000)

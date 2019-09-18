@@ -19,6 +19,14 @@
       "livenessProbe": {
         "path": "/ping"
       }
+    },
+    {
+      "id": "target-3",
+      "host": "localhost",
+      "port": 3003,
+      "livenessProbe": {
+        "path": "/ping"
+      }
     }
   ]
 }

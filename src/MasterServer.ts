@@ -2,6 +2,7 @@ import { BalancerConfig, IBalancerConfig } from './BalancerConfig'
 import { createServer, IncomingMessage, Server, ServerResponse } from 'http'
 import { BalancingAlgorithm, BalancingAlgorithmsOptions } from './BalancingAlgorithms'
 import { TargetServer } from './TargetServer'
+import * as signale from 'signale'
 
 export class MasterServer {
 
@@ -60,7 +61,9 @@ export class MasterServer {
     this.targetServers = config.servers.map(TargetServer.fromJSON)
   }
 
-  incomingMessageHandler = (request: IncomingMessage, response: ServerResponse, retry = false) => {
+  retryQueue = []
+
+  incomingMessageHandler = (request: IncomingMessage, response: ServerResponse, condition = { retry: false, queue: false }) => {
     if (request.url === '/ping') {
       response.writeHead(200, {
         'Content-Type': 'application/json'
@@ -69,7 +72,7 @@ export class MasterServer {
       return void response.end()
     }
 
-    if (retry) {
+    if (condition.retry) {
       this.retriedRequestsCount += 1
     } else {
       this.incomingRequestsCount += 1
@@ -78,7 +81,8 @@ export class MasterServer {
     const availableServers = this.targetServers.filter(server => server.health)
 
     if (!availableServers.length) {
-      response.writeHead(500, {
+      signale.error('No Servers Available')
+      response.writeHead(503, {
         'Content-Type': 'text/html'
       })
       response.write('Server Error')
