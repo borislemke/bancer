@@ -4,15 +4,17 @@ Bancer is a load balancer written in Node.js.
 
 ## Features
 
-- SSL Offloading
+### SSL Offloading
+
 Bancer has built in support for TLS termination. Simply set the `ssl` field in the `json` config file and Bancer will spin up a HTTPS server. Bancer supports offloading standard 1024-bit and 2048-bit SSL keys.
 
-- Health Check and Retry
+### Health Check and Retry
+
 When a target server is unavailable or abruptly killed while requests are ditributed to the problematic server, Bancer will attempt to retry the failed connections to other available servers.
 
 ## Configuration
 
-```json
+```jsonc
 {
   "id": "backend-service-id",
   "algorithm": "round-robin",
@@ -84,15 +86,15 @@ Liveness probe to know if a serve is ready to receive load. Periodical check wil
 
 ## Todo
 
-[ ] HTTP to HTTPS redirection
-[ ] Monitoring and Configuration UI
-[ ] Queue and retry if no servers available
-[ ] HTTP/2 Support
-[ ] Native IPv6 Support
-[ ] Content-based Routing (Host, Path, Headers, Method, Source IP, Device etc.)
-[ ] WebSocket Support
-[ ] Sticky Sessions
-[ ] Logging
-[ ] Slow Start Mode
-[ ] Fixed Response
-[ ] Data Compression
+- [ ] HTTP to HTTPS redirection
+- [ ] Monitoring and Configuration UI
+- [ ] Queue and retry if no servers available
+- [ ] HTTP/2 Support
+- [ ] Native IPv6 Support
+- [ ] Content-based Routing (Host, Path, Headers, Method, Source IP, Device etc.)
+- [ ] WebSocket Support
+- [ ] Sticky Sessions
+- [ ] Logging
+- [ ] Slow Start Mode
+- [ ] Fixed Response
+- [ ] Data Compression
