@@ -6,7 +6,7 @@
     "cert": "/path/to/server.crt",
     "key": "/path/to/server.key"
   },
-  "workers": 4,
+  "workers": "auto",
   "servers": [
     {
       "id": "server-1",

@@ -1,7 +1,17 @@
 # Bancer
+
 Bancer is a load balancer written in Node.js.
 
+## Features
+
+- SSL Offloading
+Bancer has built in support for TLS termination. Simply set the `ssl` field in the `json` config file and Bancer will spin up a HTTPS server. Bancer supports offloading standard 1024-bit and 2048-bit SSL keys.
+
+- Health Check and Retry
+When a target server is unavailable or abruptly killed while requests are ditributed to the problematic server, Bancer will attempt to retry the failed connections to other available servers.
+
 ## Configuration
+
 ```json
 {
   "id": "backend-service-id",
@@ -32,32 +42,57 @@ Bancer is a load balancer written in Node.js.
 }
 ```
 
-### `id` -> `string`
+### id -> `string`
+
 Identifier for running multiple load balancer on the same thread
 
-### `algorithm` -> `round-robin` | `least-connection` | `random` [default: `round-robin`]
+### algorithm -> `round-robin` | `least-connection` | `random` [default: `round-robin`]
+
 Defaults to `round-robin`.
 
-### `port` -> `number`
+### port -> `number`
+
 The `port` your load balancer is listening on.
 
-### `workers` -> `number` | `"unlimited"` [default: `1`]
+### workers -> `number` | `"auto"` [default: `1`]
+
 Built-in support for Node.js cluster mode. Defaults to 1. Maximum is number of available CPUs. If you set a number higher than there are available CPUs, `bancer` will gracefully fallback to the number of CPUs and show a warning.
 
-### `servers.id` -> `string` | `undefined`
+### servers.id -> `string` | `undefined`
+
 Identifier for each target server. Must be unique across different targets. If you set the same `id` on 2 or more servers, `bancer` will throw an error and quit it's process.
 
-### `servers.host` -> `number`
+### servers.host -> `number`
+
 Host the target server is running on.
 
-### `servers.port` -> `number`
+### servers.port -> `number`
+
 Port number the target server is running on. Must be unique across target servers.
 
-### `servers.weight` -> `numnber` [default: `1`]
+### servers.weight -> `numnber` [default: `1`]
+
 The ratio of traffic routed to the target servers. Higher weight means higher number of request.
 
-### `servers.livenessProbe`
+### servers.livenessProbe
 
-### `servers.livenessProbe.path`
+Liveness probe to know if a serve is ready to receive load. Periodical check will ensure traffic is directed at healthy servers only.
 
-### `servers.livenessProbe.periodSeconds`
+### servers.livenessProbe.path
+
+### servers.livenessProbe.periodSeconds
+
+## Todo
+
+[ ] HTTP to HTTPS redirection
+[ ] Monitoring and Configuration UI
+[ ] Queue and retry if no servers available
+[ ] HTTP/2 Support
+[ ] Native IPv6 Support
+[ ] Content-based Routing (Host, Path, Headers, Method, Source IP, Device etc.)
+[ ] WebSocket Support
+[ ] Sticky Sessions
+[ ] Logging
+[ ] Slow Start Mode
+[ ] Fixed Response
+[ ] Data Compression
