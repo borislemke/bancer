@@ -1,4 +1,8 @@
 import { createServer } from 'http'
+import * as cluster from 'cluster'
+import { cpus } from 'os'
+
+const numCpus = cpus().length
 
 const server = createServer((req, res) => {
   if (req.url === '/ping') {
@@ -16,6 +20,12 @@ const server = createServer((req, res) => {
   res.end()
 })
 
-server.listen(process.env.PORT, () => {
-  console.log(`Test server ${process.env.ID} running on port`, process.env.PORT)
-})
+if (cluster.isMaster) {
+  for (let i = 0; i < numCpus; i++) {
+    cluster.fork()
+  }
+} else {
+  server.listen(process.env.PORT, () => {
+    console.log(`Test server ${process.pid} running on port`, process.env.PORT)
+  })
+}
