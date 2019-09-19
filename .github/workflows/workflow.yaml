@@ -1,0 +1,19 @@
+name: Actions Test
+# This workflow is triggered on pushes to the repository.
+on: [push]
+
+jobs:
+  build:
+    # Job name is Greeting
+    name: Install Deps
+    # This job runs on Linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Hello world
+        uses: actions/setup-node@v1
+        with:
+          node-version: '10'
+        id: hello
+      - run: npm install
+      - run: npm test
