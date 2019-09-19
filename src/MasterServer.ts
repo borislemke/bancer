@@ -5,24 +5,25 @@ import { BalancingAlgorithm, BalancingAlgorithmsOptions } from './BalancingAlgor
 import { TargetServer } from './TargetServer'
 import * as signale from 'signale'
 import { readFileSync } from 'fs'
+import { apiRouter } from './api'
 
 export class MasterServer {
 
   /**
    * Total number of incoming connections in all target servers
    */
-  get requestsInTargetsCount(): number {
+  get requestsInTargetsCount (): number {
     return this.targetServers.reduce((all, curr) => all + curr.telemetryData.metrics.totalRequests, 0)
   }
 
-  get requestLossCount(): number {
+  get requestLossCount (): number {
     return this.incomingRequestsCount - this.requestsInTargetsCount
   }
 
   /**
    * In percent, the rate at which requests are lost due to re-balancing during target server unavailability.
    */
-  get requestLossRate(): string {
+  get requestLossRate (): string {
     if (!this.requestLossCount) {
       return '0%'
     }
@@ -43,7 +44,7 @@ export class MasterServer {
 
   targetServers: TargetServer[]
 
-  getTelemetryData = () => {
+  get telemetryData () {
     return {
       ...BalancerConfig,
       servers: undefined,
@@ -56,12 +57,12 @@ export class MasterServer {
     }
   }
 
-  get selectedAlgorithm(): BalancingAlgorithm {
+  get selectedAlgorithm (): BalancingAlgorithm {
     return BalancingAlgorithmsOptions[BalancerConfig.algorithm]
       || BalancingAlgorithmsOptions.default
   }
 
-  constructor(public config: IBalancerConfig) {
+  constructor (public config: IBalancerConfig) {
     if (config.ssl) {
       const sslOptions = {
         cert: readFileSync(config.ssl.cert),
@@ -76,11 +77,12 @@ export class MasterServer {
 
   incomingMessageHandler = (request: IncomingMessage, response: ServerResponse, condition = { retry: false, queue: false }) => {
     if (request.url === '/ping') {
-      response.writeHead(200, {
-        'Content-Type': 'application/json'
-      })
-      response.write(JSON.stringify(this.getTelemetryData()))
-      return void response.end()
+      response.writeHead(200, { 'Content-Type': 'text/plain' })
+      return void response.end('pong')
+    }
+
+    if (request.url.match(/^\/api/g)) {
+      return void apiRouter(request, response, this)
     }
 
     if (condition.retry) {
@@ -110,17 +112,17 @@ export class MasterServer {
     _targetServer.proxyRequest(request, response, this.incomingMessageHandler)
   }
 
-  async doLivenessProbeIfPresent() {
+  async doLivenessProbeIfPresent () {
     await Promise.all(this.targetServers.map(server => server.doLivenessProbe()))
   }
 
-  static async fromConfig(config: IBalancerConfig): Promise<MasterServer> {
+  static async fromConfig (config: IBalancerConfig): Promise<MasterServer> {
     const masterServer = new MasterServer(config)
     await masterServer.doLivenessProbeIfPresent()
     return masterServer
   }
 
-  listen(port: number, cb: (err?: any) => void) {
+  listen (port: number, cb: (err?: any) => void) {
     return this.masterServer.listen(port, cb)
   }
 }

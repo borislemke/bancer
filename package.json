@@ -9,7 +9,7 @@
     "preserve": "npm run compile",
     "serve": "NODE_ENV=production node dist/index.js",
     "preprofile": "npm run compile",
-    "profile": "NODE_ENV=production 0x -D flamechart -P 'wrk -d15s http://localhost:4040' dist/index.js",
+    "profile": "NODE_ENV=production 0x -D flamechart -P 'autocannon http://localhost:4040 -d 30' dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Boris Lemke<dimaslemke@gmail.com>",

@@ -1,6 +1,7 @@
 # Bancer
 
 Bancer is a load balancer written in Node.js.
+Dislaimer: This is a weekend project not meant to be used in production. I decided to take the load balancer as a subject to better understand the Node.js runtime and the JavaScript event loop.
 
 ## Features
 
@@ -39,6 +40,7 @@ When a target server is unavailable or abruptly killed while requests are ditrib
       "id": "server-2",
       "host": "localhost",
       "port": 3002,
+      "weight": 3,
       "livenessProbe": {
         "path": "/ping",
         "periodSeconds": 5

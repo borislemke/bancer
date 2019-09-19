@@ -20,12 +20,20 @@ const server = createServer((req, res) => {
   res.end()
 })
 
-if (cluster.isMaster) {
-  for (let i = 0; i < numCpus; i++) {
-    cluster.fork()
-  }
-} else {
+const start = () => {
   server.listen(process.env.PORT, () => {
     console.log(`Test server ${process.pid} running on port`, process.env.PORT)
   })
+}
+
+if (process.env.CLUSTER) {
+  if (cluster.isMaster) {
+    for (let i = 0; i < numCpus; i++) {
+      cluster.fork()
+    }
+  } else {
+    start()
+  }
+} else {
+  start()
 }
