@@ -1,12 +1,12 @@
 import { ITargetServerConfig } from './typings'
-import * as request from 'request'
 import * as http from 'http'
 import { Agent, IncomingMessage, ServerResponse } from 'http'
 import { promisify } from 'util'
 import * as signale from 'signale'
 import * as url from 'url'
+import { simpleGetRequest } from './simpleGet'
 
-const promisifiedRequest: any = promisify(request.get)
+type IRetryRequest = (req: IncomingMessage, res: ServerResponse, condition: { retry?: boolean, queue?: boolean }) => void
 
 export class TargetServer {
 
@@ -14,31 +14,48 @@ export class TargetServer {
 
   // Telemetry Data
   totalConnections = 0
+
+  /**
+   * Number of open connections this server is handling.
+   */
   openConnections = 0
 
+  /**
+   * Total number of errors occurred on this server, for whatever reason.
+   */
   totalEventErrors = 0
 
+  /**
+   * Shared HTTP Agent with keepAlive connections shared between requests.
+   */
   httpAgent = new Agent({ keepAlive: true })
 
+  /**
+   * Whether the target server is available for processing any request. `true` if available.
+   * Used to determine which servers can be used for load balancing.
+   */
   health = true
 
-  get host (): string {
+  /**
+   * Host address of the assigned target server.
+   */
+  get host(): string {
     return `http://${this.hostname}:${this.port}`
   }
 
-  constructor (public id: string, public hostname: string, public port: number | string) {
+  constructor(public id: string, public hostname: string, public port: number | string) {
   }
 
-  registerNewConnection () {
+  registerNewConnection() {
     this.totalConnections += 1
     this.openConnections += 1
   }
 
-  closeConnection () {
+  closeConnection() {
     this.openConnections -= 1
   }
 
-  proxyRequest (request: IncomingMessage, response: ServerResponse, retryOnError: (req: IncomingMessage, res: ServerResponse, condition: { retry?: boolean, queue?: boolean }) => void) {
+  proxyRequest(request: IncomingMessage, response: ServerResponse, retryOnError: IRetryRequest) {
     if (!this.health) {
       return retryOnError(request, response, { retry: true })
     }
@@ -86,7 +103,7 @@ export class TargetServer {
       })
   }
 
-  async doLivenessProbe () {
+  async doLivenessProbe() {
     if (!this.config.livenessProbe || !this.config.livenessProbe.path) {
       return
     }
@@ -95,7 +112,7 @@ export class TargetServer {
     let _probeError: any
 
     try {
-      await promisifiedRequest(`${this.host}/${this.config.livenessProbe.path}`)
+      await simpleGetRequest(`${this.host}/${this.config.livenessProbe.path}`)
       this.health = true
     } catch (error) {
       _probeError = error
@@ -106,13 +123,14 @@ export class TargetServer {
           ? signale.success(`Server ${this.id} health-check is OK`)
           : signale.error(`Server ${this.id} health-check is NOK! Error:`, _probeError.message)
       }
-      setTimeout(() => {
-        this.doLivenessProbe()
+
+      setTimeout(async () => {
+        await this.doLivenessProbe()
       }, (this.config.livenessProbe.periodSeconds || 5) * 1000)
     }
   }
 
-  get telemetryData () {
+  get telemetryData() {
     return {
       config: this.config,
       metrics: {
@@ -123,7 +141,7 @@ export class TargetServer {
     }
   }
 
-  static fromJSON (json: ITargetServerConfig): TargetServer {
+  static fromJSON(json: ITargetServerConfig): TargetServer {
     const {
       id,
       host,

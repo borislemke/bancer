@@ -17,6 +17,12 @@ export interface IJSONConfig {
   id: string
   port: number
   algorithm: string
+  workers?: number
+
+  ssl?: {
+    cert: string
+    key: string
+  }
 
   servers: ITargetServerConfig[]
 

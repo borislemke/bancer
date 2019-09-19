@@ -2,9 +2,9 @@ import { TargetServer } from './TargetServer'
 
 let _queuePool = 0
 
-export type BalancingAlgorithm = (servers: TargetServer[]) => [TargetServer, number]
+export type BalancingAlgorithm = (servers: TargetServer[]) => TargetServer
 
-const roundRobin: BalancingAlgorithm = servers => {
+const roundRobinAlgorithm: BalancingAlgorithm = servers => {
   const weightAndKey = servers.map((server, index) => {
     return {
       server: server,
@@ -16,11 +16,10 @@ const roundRobin: BalancingAlgorithm = servers => {
     return [...all, ...Array(curr.weight).fill(curr)]
   }, [])
   const index = _queuePool++ % multipliedByWeight.length
-  const { server, key } = multipliedByWeight[index]
-  return [server, key]
+  return multipliedByWeight[index].server
 }
 
-const leastConnection: BalancingAlgorithm = servers => {
+const leastConnectionAlgorithm: BalancingAlgorithm = servers => {
   const _openConnection = servers.map((server, index) => {
     return {
       key: index,
@@ -34,24 +33,17 @@ const leastConnection: BalancingAlgorithm = servers => {
   })
 
   const index = sortedConnections[0].key
-  return [servers[index], index]
+  return servers[index]
 }
 
 const randomAlgorithm: BalancingAlgorithm = servers => {
   const index = Math.floor(Math.random() * servers.length)
-  return [servers[index], index]
-}
-
-const returnIfOne = (ba: BalancingAlgorithm) => (servers: TargetServer[]): [TargetServer, number] => {
-  if (servers.length === 1) {
-    return [servers[0], 0]
-  }
-  return ba(servers)
+  return servers[index]
 }
 
 export const BalancingAlgorithmsOptions: { [method: string]: BalancingAlgorithm } = {
-  'round-robin': returnIfOne(roundRobin),
-  'least-connection': returnIfOne(leastConnection),
-  'random': returnIfOne(randomAlgorithm),
-  default: returnIfOne(roundRobin)
+  'round-robin': roundRobinAlgorithm,
+  'least-connection': leastConnectionAlgorithm,
+  'random': randomAlgorithm,
+  default: roundRobinAlgorithm
 }
