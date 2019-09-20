@@ -82,7 +82,7 @@ export class MasterServer {
     }
 
     if (request.url.match(/^\/api/g)) {
-      return void apiRouter(request, response, this)
+      return void apiRouter(this)(request, response)
     }
 
     if (condition.retry) {

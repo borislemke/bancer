@@ -11,6 +11,12 @@ export interface ITargetServerConfig {
   weight?: number
   name?: string
   livenessProbe?: ILivenessProbe
+
+  fixedResponse?: {
+    headers?: any
+    statusCode?: number
+    body?: any
+  }
 }
 
 export interface IJSONConfig {

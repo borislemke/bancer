@@ -39,23 +39,43 @@ export class TargetServer {
   /**
    * Host address of the assigned target server.
    */
-  get host(): string {
+  get host (): string {
     return `http://${this.hostname}:${this.port}`
   }
 
-  constructor(public id: string, public hostname: string, public port: number | string) {
+  constructor (public id: string, public hostname: string, public port: number | string) {
   }
 
-  registerNewConnection() {
+  registerNewConnection () {
     this.totalConnections += 1
     this.openConnections += 1
   }
 
-  closeConnection() {
+  closeConnection () {
     this.openConnections -= 1
   }
 
-  proxyRequest(request: IncomingMessage, response: ServerResponse, retryOnError: IRetryRequest) {
+  replyWithFixedResponse (response: ServerResponse) {
+    const {
+      headers = {},
+      statusCode = 200,
+      body = ''
+    } = this.config.fixedResponse
+
+    response.writeHead(statusCode, headers)
+
+    response.end(
+      typeof body === 'object'
+        ? JSON.stringify(body)
+        : `${body}`
+    )
+  }
+
+  proxyRequest (request: IncomingMessage, response: ServerResponse, retryOnError: IRetryRequest) {
+    if (this.config.fixedResponse) {
+      return this.replyWithFixedResponse(response)
+    }
+
     if (!this.health) {
       return retryOnError(request, response, { retry: true })
     }
@@ -103,7 +123,7 @@ export class TargetServer {
       })
   }
 
-  async doLivenessProbe() {
+  async doLivenessProbe () {
     if (!this.config.livenessProbe || !this.config.livenessProbe.path) {
       return
     }
@@ -130,7 +150,7 @@ export class TargetServer {
     }
   }
 
-  get telemetryData() {
+  get telemetryData () {
     return {
       config: this.config,
       metrics: {
@@ -141,7 +161,7 @@ export class TargetServer {
     }
   }
 
-  static fromJSON(json: ITargetServerConfig): TargetServer {
+  static fromJSON (json: ITargetServerConfig): TargetServer {
     const {
       id,
       host,

@@ -105,5 +105,5 @@ Liveness probe to know if a serve is ready to receive load. Periodical check wil
 - [ ] Sticky Sessions
 - [ ] Logging
 - [ ] Slow Start Mode
-- [ ] Fixed Response
+- [x] Fixed Response
 - [ ] Data Compression

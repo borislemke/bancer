@@ -1,10 +1,13 @@
 import { ServerResponse, IncomingMessage } from 'http'
-import { TargetServer } from 'src/TargetServer'
 import { MasterServer } from 'src/MasterServer'
+import * as express from 'express'
 
-export const apiRouter = (request: IncomingMessage, response: ServerResponse, masterServer: MasterServer) => {
-  response.writeHead(200, {
-    'Content-Type': 'application/json'
-  })
-  response.end(JSON.stringify(masterServer.telemetryData))
+const server = express()
+
+server.use('/api', (request, response) => {
+  response.send({ ping: 'pong' })
+})
+
+export const apiRouter = (masterServer: MasterServer) => (request: IncomingMessage, response: ServerResponse) => {
+  server(request, response)
 }

@@ -1,0 +1,44 @@
+{
+  "id": "backend-service-id",
+  "algorithm": "round-robin",
+  "port": 4040,
+  "ssl": {
+    "cert": "/path/to/server.crt",
+    "key": "/path/to/server.key"
+  },
+  "workers": "auto",
+  "servers": [
+    {
+      "id": "server-1",
+      "host": "localhost",
+      "port": 3001,
+      "weight": 2,
+      "livenessProbe": {
+        "path": "/ping",
+        "periodSeconds": 5
+      },
+      "slowStart": {
+        "rampUpSeconds": 10 // Number of seconds the load is incrementally distributed to from
+                            // a factor of 0% to 100%. Weight is being taken into account.
+      },
+      "fixedResponse": { // Fixed Response. When set requests will not be forwarded to the
+                         // target server and this response is returned immediately instead.
+        "headers": {
+          "X-Static-Response-Server": "$server_id",
+          "X-Static-Response": "Some Other Value"
+        },
+        "statusCode": 201,
+        "body": "This is a static response"
+      }
+    },
+    {
+      "id": "server-2",
+      "host": "localhost",
+      "port": 3002,
+      "livenessProbe": {
+        "path": "/ping",
+        "periodSeconds": 5
+      }
+    }
+  ]
+}
